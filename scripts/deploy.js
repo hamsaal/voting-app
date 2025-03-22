@@ -7,7 +7,15 @@ async function main() {
 
   const helloWorld = await HelloWorld.deploy();
 
-  if (helloWorld.deploymentTransaction?.hash) {
+  if (helloWorld.deployTransaction && helloWorld.deployTransaction.hash) {
+    console.log(
+      "Deployment transaction sent:",
+      helloWorld.deployTransaction.hash
+    );
+  } else if (
+    helloWorld.deploymentTransaction &&
+    helloWorld.deploymentTransaction.hash
+  ) {
     console.log(
       "Deployment transaction sent:",
       helloWorld.deploymentTransaction.hash
@@ -16,9 +24,15 @@ async function main() {
     console.log("Deployment transaction hash not available.");
   }
 
-  await helloWorld.waitForDeployment();
-  console.log("Deployment confirmed");
-  console.log("HelloWorld deployed to:", await helloWorld.getAddress());
+  if (helloWorld.waitForDeployment) {
+    await helloWorld.waitForDeployment();
+    console.log("Deployment confirmed");
+    console.log("HelloWorld deployed to:", await helloWorld.getAddress());
+  } else {
+    await helloWorld.deployed();
+    console.log("Deployment confirmed");
+    console.log("HelloWorld deployed to:", helloWorld.address);
+  }
 }
 
 main().catch((error) => {
