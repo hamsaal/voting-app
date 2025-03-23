@@ -1,13 +1,16 @@
+// src/pages/Home.jsx
+
 import { useAuth } from "../contexts/AuthProvider.jsx";
 
 function Home() {
-  const { account } = useAuth();
+  const { account, chainId, isAdmin } = useAuth();
 
   return (
     <div style={{ textAlign: "center", marginTop: "2rem" }}>
       <h1>Home Page</h1>
-      <p>Connected wallet: {account}</p>
-      <p>This is where your main DApp functionality goes.</p>
+      <p>Wallet: {account}</p>
+      <p>Chain ID: {chainId}</p>
+      <p>{isAdmin ? "You have admin privileges." : "You are a normal user."}</p>
     </div>
   );
 }
