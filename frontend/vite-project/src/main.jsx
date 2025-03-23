@@ -12,6 +12,8 @@ import { AuthProvider, useAuth } from "./contexts/AuthProvider.jsx";
 import Home from "./pages/Home.jsx";
 import Login from "./features/user-auth/pages/Login.jsx";
 import Error from "./pages/Error.jsx";
+// Import the new AdminPanel
+import AdminPanel from "./pages/AdminPanel.jsx";
 
 function PrivateRoute({ children }) {
   const { account, isOnDesiredNetwork } = useAuth();
@@ -24,7 +26,6 @@ function PrivateRoute({ children }) {
   return children;
 }
 
-// If you need an admin-only route:
 function AdminRoute({ children }) {
   const { account, isOnDesiredNetwork, isAdmin } = useAuth();
   if (!account) {
@@ -54,12 +55,11 @@ const router = createBrowserRouter([
     element: <Login />,
     errorElement: <Error />,
   },
-  // Example admin route
   {
     path: "/admin",
     element: (
       <AdminRoute>
-        <div>Admin Panel</div>
+        <AdminPanel />
       </AdminRoute>
     ),
     errorElement: <Error />,

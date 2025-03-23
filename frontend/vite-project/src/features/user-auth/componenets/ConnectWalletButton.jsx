@@ -1,4 +1,4 @@
-// ConnectWalletButton.jsx
+
 
 function ConnectWalletButton({ onConnect }) {
   const handleConnect = async () => {
