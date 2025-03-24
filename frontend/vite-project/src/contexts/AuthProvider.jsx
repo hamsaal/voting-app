@@ -7,11 +7,10 @@ import {
 } from "../features/user-auth/services/authService.js";
 import { requestAccount } from "../features/user-auth/utilis/walletUtlis";
 
-// Example Hardhat local chain ID (0x7a69 = 31337)
+// Hardhat local chain ID (0x7a69 = 31337 decimal)
 const DESIRED_CHAIN_ID = "0x7a69";
 
-// Grab your Auth contract address from an .env variable
-// e.g., VITE_AUTH_CONTRACT_ADDRESS=0x1234...abcd
+// The Auth contract address from your .env, e.g., VITE_CONTRACT_ADDRESS=0x1234...
 const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS;
 
 const AuthContext = createContext(null);
@@ -22,14 +21,50 @@ export function AuthProvider({ children }) {
   const [isOnDesiredNetwork, setIsOnDesiredNetwork] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
 
   /**
-   * Listen for account changes AFTER the user has connected once
+   * Auto-connect on mount:
+   * 1) Check if there's a stored account in localStorage (optional).
+   * 2) If none, call MetaMask's 'eth_accounts' to see if there's an already-approved account.
+   */
+  useEffect(() => {
+    async function tryAutoConnect() {
+      // 1. Check local storage
+      const storedAcc = localStorage.getItem("connectedAccount");
+      if (storedAcc) {
+        console.log("Restoring account from localStorage:", storedAcc);
+        setAccount(storedAcc);
+      } else if (window.ethereum) {
+        // 2. Check if MetaMask has an approved account
+        const accounts = await window.ethereum.request({
+          method: "eth_accounts",
+        });
+        if (accounts.length) {
+          console.log("Auto-connecting to:", accounts[0]);
+          setAccount(accounts[0]);
+          localStorage.setItem("connectedAccount", accounts[0]); // optional
+        }
+      }
+      // We won't set chainId yet—will do so after connect or in the next effect.
+    }
+    tryAutoConnect();
+  }, []);
+
+  /**
+   * Listen for account changes in MetaMask
    */
   useEffect(() => {
     if (window.ethereum) {
       const handleAccountsChanged = (accounts) => {
-        setAccount(accounts.length ? accounts[0] : "");
+        const newAcc = accounts.length ? accounts[0] : "";
+        setAccount(newAcc);
+        // Update local storage
+        if (newAcc) {
+          localStorage.setItem("connectedAccount", newAcc);
+        } else {
+          localStorage.removeItem("connectedAccount");
+        }
       };
       window.ethereum.on("accountsChanged", handleAccountsChanged);
 
@@ -43,7 +78,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   /**
-   * Listen for chain changes AFTER the user has connected once
+   * Listen for chain changes in MetaMask
    */
   useEffect(() => {
     if (window.ethereum) {
@@ -62,28 +97,41 @@ export function AuthProvider({ children }) {
   }, []);
 
   /**
-   * Whenever account or network changes, check admin status if we’re on the correct network
+   * Whenever account or network changes, check admin status if on correct network
    */
   useEffect(() => {
     async function fetchAdminStatus() {
-      if (!account) {
-        setIsAdmin(false);
-        return;
-      }
-      if (!isOnDesiredNetwork) {
-        setIsAdmin(false);
-        return;
-      }
-      try {
-        // 1) Initialize the Auth contract
-        await initAuthContract(CONTRACT_ADDRESS);
+      console.log("fetchAdminStatus triggered", {
+        account,
+        isOnDesiredNetwork,
+      });
 
-        // 2) Check if the user is admin
+      // If no account or wrong network, skip contract calls
+      if (!account || !isOnDesiredNetwork) {
+        console.log(
+          "No account or wrong network => isAdmin=false, isLoading=false"
+        );
+        setIsAdmin(false);
+        setIsLoading(false);
+        return;
+      }
+
+      console.log("Setting isLoading=true");
+      setIsLoading(true);
+
+      try {
+        console.log("Initializing contract at:", CONTRACT_ADDRESS);
+        await initAuthContract(CONTRACT_ADDRESS);
+        console.log("Contract initialized. Checking admin for:", account);
         const adminStatus = await checkIfAdmin(account);
+        console.log("adminStatus is:", adminStatus);
         setIsAdmin(adminStatus);
       } catch (err) {
         console.error("Admin check failed:", err);
         setIsAdmin(false);
+      } finally {
+        console.log("Finally block => isLoading=false");
+        setIsLoading(false);
       }
     }
     fetchAdminStatus();
@@ -95,8 +143,9 @@ export function AuthProvider({ children }) {
   const connectWallet = async () => {
     try {
       setError("");
-      const acc = await requestAccount();
+      const acc = await requestAccount(); // triggers MetaMask to request accounts
       setAccount(acc);
+      localStorage.setItem("connectedAccount", acc);
 
       if (window.ethereum) {
         const currentChainId = await window.ethereum.request({
@@ -120,7 +169,7 @@ export function AuthProvider({ children }) {
   };
 
   /**
-   * Add a new admin address (only works if current user is admin)
+   * Add new admin address (only works if current user is admin)
    */
   const addAdminAddress = async (newAdmin) => {
     try {
@@ -128,7 +177,7 @@ export function AuthProvider({ children }) {
       if (!isAdmin) {
         throw new Error("You must be an admin to add new admins.");
       }
-      await initAuthContract(CONTRACT_ADDRESS); // ensure contract is ready
+      await initAuthContract(CONTRACT_ADDRESS);
       const tx = await addAdmin(newAdmin);
       console.log("Add Admin TX:", tx);
     } catch (err) {
@@ -146,13 +195,18 @@ export function AuthProvider({ children }) {
       if (!isAdmin) {
         throw new Error("You must be an admin to remove admins.");
       }
-      await initAuthContract(CONTRACT_ADDRESS); // ensure contract is ready
+      await initAuthContract(CONTRACT_ADDRESS);
       const tx = await removeAdmin(adminToRemove);
       console.log("Remove Admin TX:", tx);
     } catch (err) {
       console.error("Error removing admin:", err);
       setError(err.message);
     }
+  };
+  const logout = () => {
+    setAccount("");
+    setIsAdmin(false);
+    localStorage.removeItem("connectedAccount"); // if you're storing the account
   };
 
   return (
@@ -162,10 +216,12 @@ export function AuthProvider({ children }) {
         chainId,
         isOnDesiredNetwork,
         isAdmin,
+        isLoading,
         error,
         connectWallet,
         addAdminAddress,
         removeAdminAddress,
+        logout,
       }}
     >
       {children}
@@ -174,7 +230,7 @@ export function AuthProvider({ children }) {
 }
 
 /**
- * Custom hook to consume the Auth context.
+ * Custom hook to consume AuthContext
  */
 export function useAuth() {
   return useContext(AuthContext);
