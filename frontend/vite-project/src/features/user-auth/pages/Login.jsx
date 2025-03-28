@@ -1,5 +1,5 @@
 import React from "react";
-import { useAuth } from "../../../contexts/AuthProvider.jsx";
+useAuth
 import { Navigate } from "react-router-dom";
 
 function Login() {
@@ -19,11 +19,7 @@ function Login() {
 
   // If user is connected & on correct network
   if (account && isOnDesiredNetwork) {
-    // If admin, go to /admin
-    if (isAdmin) {
-      return <Navigate to="/admin" replace />;
-    }
-    // Otherwise, go to /
+
     return <Navigate to="/" replace />;
   }
 
