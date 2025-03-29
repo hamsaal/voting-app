@@ -1,29 +1,33 @@
-// src/services/helloServices.js
-import { ethers } from "ethers";
-import HelloWorldArtifact from "../../../../artifacts/contracts/HelloWorld.sol/HelloWorld.json";
+const hre = require("hardhat");
 
-let helloWorldContract;
+async function main() {
+  console.log("Starting deployment...");
 
-export const initHelloWorldContract = async (contractAddress) => {
-  if (window.ethereum) {
-    // Use MetaMask's provider with ethers v6
-    const provider = new ethers.BrowserProvider(window.ethereum);
-    const signer = await provider.getSigner();
-    // Create a contract instance with the ABI, address, and signer
-    helloWorldContract = new ethers.Contract(
-      contractAddress,
-      HelloWorldArtifact.abi,
-      signer
-    );
-  } else {
-    throw new Error("MetaMask is not installed.");
-  }
-};
+  // 1. Deploy Auth contract
+  const Auth = await hre.ethers.getContractFactory("Auth");
+  const auth = await Auth.deploy();
+  console.log("Auth deployment transaction hash:", auth.deployTransaction.hash);
+  // Wait until the Auth contract is fully deployed
+  await auth.waitForDeployment();
+  const authAddress = await auth.getAddress();
+  console.log("Auth deployed to:", authAddress);
 
-export const getGreet = async () => {
-  if (!helloWorldContract) {
-    throw new Error("Contract is not initialized");
-  }
-  // Call the contract’s greet() function
-  return await helloWorldContract.greet();
-};
+  // 2. Deploy ElectionManager contract with Auth's address as constructor parameter
+  const ElectionManager = await hre.ethers.getContractFactory(
+    "ElectionManager"
+  );
+  const electionManager = await ElectionManager.deploy(authAddress);
+  console.log(
+    "ElectionManager deployment transaction hash:",
+    electionManager.deployTransaction.hash
+  );
+  // Wait until ElectionManager is fully deployed
+  await electionManager.waitForDeployment();
+  const electionManagerAddress = await electionManager.getAddress();
+  console.log("ElectionManager deployed to:", electionManagerAddress);
+}
+
+main().catch((error) => {
+  console.error("Deployment error:", error);
+  process.exitCode = 1;
+});
