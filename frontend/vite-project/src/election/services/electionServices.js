@@ -1,7 +1,6 @@
 import { ethers } from "ethers";
 import electionManagerArtifact from "/Users/Taz/voting-app/artifacts/contracts/ElectionManager.sol/ElectionManager.json";
 
-// Reference to the ElectionManager contract instance
 let electionManagerContract;
 
 /**
@@ -23,12 +22,7 @@ export async function initElectionManagerContract(contractAddress) {
 }
 
 /**
- * Create a new election by calling the ElectionManager contract.
- * @param {string} title The title of the election.
- * @param {string} description A brief description of the election.
- * @param {string[]} candidates An array of candidate addresses.
- * @param {number} startTime The start time as a Unix timestamp.
- * @param {number} endTime The end time as a Unix timestamp.
+ * Create a new election.
  */
 export async function createElection(
   title,
@@ -53,10 +47,11 @@ export async function createElection(
 
 /**
  * Fetch all elections from the ElectionManager contract.
- * Converts BigNumber values to numbers for display.
- * @returns {Promise<Array>} An array of election objects.
+ * Also checks if the current account has voted in each election.
+ * @param {string} currentAccount The user's wallet address.
+ * @returns {Promise<Array>} Array of election objects.
  */
-export async function fetchElections() {
+export async function fetchElections(currentAccount) {
   if (!electionManagerContract) {
     throw new Error("ElectionManager contract not initialized");
   }
@@ -65,6 +60,10 @@ export async function fetchElections() {
   const elections = [];
   for (let i = 1; i <= count; i++) {
     const election = await electionManagerContract.elections(i);
+    let voted = false;
+    if (currentAccount) {
+      voted = await electionManagerContract.hasVoted(i, currentAccount);
+    }
     elections.push({
       id: Number(election.id),
       title: election.title,
@@ -73,7 +72,35 @@ export async function fetchElections() {
       startTime: Number(election.startTime),
       endTime: Number(election.endTime),
       active: election.active,
+      hasVoted: voted,
     });
   }
   return elections;
+}
+
+/**
+ * Vote for a candidate in an election.
+ * @param {number} electionId The election ID.
+ * @param {number} candidateIndex The candidate's index.
+ */
+export async function vote(electionId, candidateIndex) {
+  if (!electionManagerContract) {
+    throw new Error("ElectionManager contract not initialized");
+  }
+  const tx = await electionManagerContract.vote(electionId, candidateIndex);
+  await tx.wait();
+  return tx;
+}
+
+/**
+ * Compute the winner of an expired election.
+ * @param {number} electionId The election ID.
+ * @returns {string} The winning candidate's name.
+ */
+export async function computeWinner(electionId) {
+  if (!electionManagerContract) {
+    throw new Error("ElectionManager contract not initialized");
+  }
+  const winner = await electionManagerContract.computeWinner(electionId);
+  return winner;
 }

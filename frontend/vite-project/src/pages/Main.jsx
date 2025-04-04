@@ -3,15 +3,7 @@ import { Navigate } from "react-router-dom";
 import Home from "./Home.jsx";
 
 function Main() {
-  const {
-    account,
-    chainId,
-    isAdmin,
-    isOnDesiredNetwork,
-    isLoading,
-    error,
-    logout,
-  } = useAuth();
+  const { account, isAdmin, isLoading, error, logout } = useAuth();
 
   // 1. If still checking admin status, show a spinner or message
   if (isLoading) {

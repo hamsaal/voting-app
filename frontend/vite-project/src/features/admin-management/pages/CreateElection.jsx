@@ -21,26 +21,40 @@ function CreateElection() {
   const [endTime, setEndTime] = useState("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
   const navigate = useNavigate();
+
+  const validateForm = () => {
+    const errors = {};
+    if (!title.trim()) errors.title = "Title is required";
+    if (!description.trim()) errors.description = "Description is required";
+    if (!candidates.trim())
+      errors.candidates = "At least one candidate is required";
+    if (!startTime) errors.startTime = "Start time is required";
+    if (!endTime) errors.endTime = "End time is required";
+    else if (new Date(startTime) >= new Date(endTime))
+      errors.endTime = "End time must be later than start time";
+    return errors;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const errors = validateForm();
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      return;
+    }
     try {
       setError("");
       setMessage("");
-      // Convert comma-separated candidate addresses into an array.
+      setFieldErrors({});
       const candidatesArray = candidates
         .split(",")
-        .map((addr) => addr.trim())
-        .filter((addr) => addr !== "");
-
-      // Convert datetime-local input to Unix timestamps.
+        .map((val) => val.trim())
+        .filter((val) => val !== "");
       const startTimestamp = Math.floor(new Date(startTime).getTime() / 1000);
       const endTimestamp = Math.floor(new Date(endTime).getTime() / 1000);
-
-      // Get the ElectionManager contract address from environment variables.
       const contractAddress = import.meta.env.VITE_ELECTION_MANAGER_ADDRESS;
-      console.log("ElectionManager Address from env:", contractAddress);
       await initElectionManagerContract(contractAddress);
       await createElection(
         title,
@@ -50,7 +64,6 @@ function CreateElection() {
         endTimestamp
       );
       setMessage("Election created successfully!");
-      // Navigate back to the admin dashboard.
       navigate("/admin");
     } catch (err) {
       setError(err.message || "Failed to create election");
@@ -85,6 +98,8 @@ function CreateElection() {
           margin="normal"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
+          error={Boolean(fieldErrors.title)}
+          helperText={fieldErrors.title}
         />
         <TextField
           label="Description"
@@ -95,14 +110,18 @@ function CreateElection() {
           rows={4}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
+          error={Boolean(fieldErrors.description)}
+          helperText={fieldErrors.description}
         />
         <TextField
-          label="Candidates (comma separated addresses)"
+          label="Candidates (comma separated names/numbers)"
           fullWidth
           required
           margin="normal"
           value={candidates}
           onChange={(e) => setCandidates(e.target.value)}
+          error={Boolean(fieldErrors.candidates)}
+          helperText={fieldErrors.candidates}
         />
         <TextField
           label="Start Time"
@@ -113,6 +132,8 @@ function CreateElection() {
           InputLabelProps={{ shrink: true }}
           value={startTime}
           onChange={(e) => setStartTime(e.target.value)}
+          error={Boolean(fieldErrors.startTime)}
+          helperText={fieldErrors.startTime}
         />
         <TextField
           label="End Time"
@@ -123,6 +144,8 @@ function CreateElection() {
           InputLabelProps={{ shrink: true }}
           value={endTime}
           onChange={(e) => setEndTime(e.target.value)}
+          error={Boolean(fieldErrors.endTime)}
+          helperText={fieldErrors.endTime}
         />
         <Box textAlign="center" mt={2}>
           <Button variant="contained" color="primary" type="submit">

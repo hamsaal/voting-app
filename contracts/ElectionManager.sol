@@ -12,7 +12,7 @@ contract ElectionManager {
         uint id;
         string title;
         string description;
-        address[] candidates;
+        string[] candidates; // Candidate names or numbers
         uint startTime;
         uint endTime;
         bool active;
@@ -21,7 +21,12 @@ contract ElectionManager {
     mapping(uint => Election) public elections;
     uint public electionCount;
 
-    // Events for creation and updates
+    // Mapping to track votes: electionId => candidate index => vote count
+    mapping(uint => mapping(uint => uint)) public votes;
+    // Mapping to track if an address has already voted in an election
+    mapping(uint => mapping(address => bool)) public hasVoted;
+
+    // Events for creation, votes, and updates
     event ElectionCreated(
         uint indexed electionId,
         string title,
@@ -29,23 +34,28 @@ contract ElectionManager {
         uint endTime
     );
     event ElectionUpdated(uint indexed electionId, string title);
+    event Voted(
+        uint indexed electionId,
+        address indexed voter,
+        uint candidateIndex
+    );
 
     // Set the Auth contract during deployment
     constructor(address authAddress) {
         auth = Auth(authAddress);
     }
 
-    // Modifier to restrict access using the external Auth contract's admin check
+    // Modifier to restrict functions to admin-only
     modifier onlyAdmin() {
         require(auth.isAdmin(msg.sender), "Caller is not an admin");
         _;
     }
 
-    // Create a new election (only callable by an admin from the Auth contract)
+    // Create a new election (only callable by an admin)
     function createElection(
         string memory _title,
         string memory _description,
-        address[] memory _candidates,
+        string[] memory _candidates,
         uint _startTime,
         uint _endTime
     ) public onlyAdmin {
@@ -70,7 +80,7 @@ contract ElectionManager {
         uint _electionId,
         string memory _title,
         string memory _description,
-        address[] memory _candidates,
+        string[] memory _candidates,
         uint _startTime,
         uint _endTime
     ) public onlyAdmin {
@@ -85,5 +95,45 @@ contract ElectionManager {
         election.endTime = _endTime;
 
         emit ElectionUpdated(_electionId, _title);
+    }
+
+    // Vote for a candidate in an election (each address can vote only once per election)
+    function vote(uint _electionId, uint _candidateIndex) public {
+        Election storage election = elections[_electionId];
+        require(
+            block.timestamp >= election.startTime &&
+                block.timestamp <= election.endTime,
+            "Election is not active"
+        );
+        require(election.active, "Election is disabled");
+        require(
+            _candidateIndex < election.candidates.length,
+            "Invalid candidate index"
+        );
+        require(!hasVoted[_electionId][msg.sender], "Already voted");
+
+        votes[_electionId][_candidateIndex] += 1;
+        hasVoted[_electionId][msg.sender] = true;
+
+        emit Voted(_electionId, msg.sender, _candidateIndex);
+    }
+
+    // Compute the winner of an expired election (only callable by admin)
+    // Returns the candidate name with the highest vote count
+    function computeWinner(
+        uint _electionId
+    ) public view onlyAdmin returns (string memory winner) {
+        Election storage election = elections[_electionId];
+        require(block.timestamp > election.endTime, "Election is still active");
+
+        uint highestVotes = 0;
+        uint winnerIndex = 0;
+        for (uint i = 0; i < election.candidates.length; i++) {
+            if (votes[_electionId][i] > highestVotes) {
+                highestVotes = votes[_electionId][i];
+                winnerIndex = i;
+            }
+        }
+        winner = election.candidates[winnerIndex];
     }
 }

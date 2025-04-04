@@ -6,7 +6,6 @@ function AdminPage() {
   const { isAdmin } = useAuth();
   const navigate = useNavigate();
 
-  // If the user is not an admin, redirect them to the Home page.
   if (!isAdmin) {
     return <Navigate to="/" replace />;
   }
@@ -16,7 +15,7 @@ function AdminPage() {
       maxWidth="md"
       sx={{
         mt: 4,
-        bgcolor: "#f0f4f8", // light blue-gray background
+        bgcolor: "#f0f4f8",
         py: 4,
         borderRadius: 2,
       }}
@@ -42,12 +41,18 @@ function AdminPage() {
         <Button
           variant="outlined"
           color="primary"
+          onClick={() => navigate("manage-results")}
+        >
+          Manage Results
+        </Button>
+        <Button
+          variant="outlined"
+          color="primary"
           onClick={() => navigate("manage-admin")}
         >
           Manage Admin
         </Button>
       </Box>
-      {/* Nested routes will be rendered here */}
       <Outlet />
     </Container>
   );
