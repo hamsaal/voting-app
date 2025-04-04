@@ -1,17 +1,131 @@
-// src/pages/Home.jsx
-
+import { useEffect, useState } from "react";
+import {
+  Container,
+  Typography,
+  Card,
+  CardContent,
+  Box,
+  CircularProgress,
+} from "@mui/material";
 import { useAuth } from "../contexts/AuthProvider.jsx";
+import {
+  fetchElections,
+  initElectionManagerContract,
+} from "../election/services/electionServices.js";
 
 function Home() {
   const { account, chainId, isAdmin } = useAuth();
+  const [elections, setElections] = useState([]);
+  const [loadingElections, setLoadingElections] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const loadElections = async () => {
+      setLoadingElections(true);
+      try {
+        const contractAddress = import.meta.env.VITE_ELECTION_MANAGER_ADDRESS;
+        await initElectionManagerContract(contractAddress);
+        const fetchedElections = await fetchElections();
+        setElections(fetchedElections);
+      } catch (err) {
+        setError(err.message || "Failed to load elections");
+      } finally {
+        setLoadingElections(false);
+      }
+    };
+
+    loadElections();
+  }, []);
 
   return (
-    <div style={{ textAlign: "center", marginTop: "2rem" }}>
-      <h1>Home Page</h1>
-      <p>Wallet: {account}</p>
-      <p>Chain ID: {chainId}</p>
-      <p>{isAdmin ? "You have admin privileges." : "You are a normal user."}</p>
-    </div>
+    <Container
+      maxWidth="md"
+      sx={{
+        mt: 4,
+        bgcolor: "#f0f4f8", // Light blue-gray background
+        py: 4,
+        px: { xs: 2, md: 4 },
+        borderRadius: 2,
+      }}
+    >
+      <Box textAlign="center" mb={4}>
+        <Typography
+          variant="h4"
+          component="h1"
+          gutterBottom
+          sx={{ color: "#1976d2" }} // Primary blue for header
+        >
+          Home Page
+        </Typography>
+        <Typography variant="body1" sx={{ color: "#333" }}>
+          <strong>Wallet:</strong> {account} | <strong>Chain ID:</strong>{" "}
+          {chainId}
+        </Typography>
+        <Typography variant="subtitle1" sx={{ color: "#555" }}>
+          {isAdmin ? "You have admin privileges." : "You are a normal user."}
+        </Typography>
+      </Box>
+      <Box mb={4}>
+        <Typography
+          variant="h5"
+          component="h2"
+          gutterBottom
+          sx={{ color: "#1976d2" }}
+        >
+          Current Elections
+        </Typography>
+        {loadingElections && (
+          <Box display="flex" justifyContent="center" mt={2}>
+            <CircularProgress sx={{ color: "#1976d2" }} />
+          </Box>
+        )}
+        {error && (
+          <Typography color="error" sx={{ mt: 2 }}>
+            {error}
+          </Typography>
+        )}
+        {elections.length > 0
+          ? elections.map((election) => (
+              <Card
+                key={election.id}
+                sx={{
+                  mb: 2,
+                  backgroundColor: "#ffffff",
+                  boxShadow: 3,
+                  borderRadius: 2,
+                }}
+              >
+                <CardContent>
+                  <Typography variant="h6" sx={{ color: "#1976d2" }}>
+                    {election.title}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ mb: 1 }}
+                  >
+                    {election.description}
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: "#333" }}>
+                    <strong>Start:</strong>{" "}
+                    {new Date(election.startTime * 1000).toLocaleString()}
+                    <br />
+                    <strong>End:</strong>{" "}
+                    {new Date(election.endTime * 1000).toLocaleString()}
+                  </Typography>
+                  <Typography variant="body2" sx={{ mt: 1, color: "#555" }}>
+                    {election.active ? "Active" : "Inactive"}
+                  </Typography>
+                </CardContent>
+              </Card>
+            ))
+          : !loadingElections && (
+              <Typography variant="body1" sx={{ color: "#333" }}>
+                No elections available
+              </Typography>
+            )}
+      </Box>
+    </Container>
   );
 }
 

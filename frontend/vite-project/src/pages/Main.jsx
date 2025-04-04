@@ -1,9 +1,6 @@
-// src/pages/MainPage.jsx
-
 import { useAuth } from "../contexts/AuthProvider.jsx";
 import { Navigate } from "react-router-dom";
 import Home from "./Home.jsx";
-import AdminPanel from "./AdminPanel.jsx";
 
 function Main() {
   const {
@@ -27,36 +24,19 @@ function Main() {
   }
 
   // 3. If wrong network, show a message
-  if (!isOnDesiredNetwork) {
-    return (
-      <div style={{ textAlign: "center", marginTop: "2rem" }}>
-        <h1>Please switch to the correct network</h1>
-        <p>Expected chain ID: 0x7a69 (Hardhat local by default)</p>
-        <button onClick={logout}>Logout</button>
-      </div>
-    );
+
+  // 4. If the user is admin, redirect to the admin management page
+  if (isAdmin) {
+    return <Navigate to="/admin" replace />;
   }
 
-  // 4. If everything is good, show a top bar + either AdminPanel or Home
+  // 5. If everything is good and the user is a normal user, show the Home page.
   return (
     <div style={{ textAlign: "center", marginTop: "2rem" }}>
-      <p>Logged in as: {account}</p>
-      <p>Chain ID: {chainId}</p>
       {error && <p style={{ color: "red" }}>{error}</p>}
-
       <button onClick={logout}>Logout</button>
 
-      {isAdmin ? (
-        <>
-          <h2>Admin Panel</h2>
-          <AdminPanel />
-        </>
-      ) : (
-        <>
-          <h2>Home Page</h2>
-          <Home />
-        </>
-      )}
+      <Home />
     </div>
   );
 }
