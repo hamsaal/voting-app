@@ -87,27 +87,26 @@ contract ElectionManager {
         require(elections[_electionId].id != 0, "Election does not exist");
         require(_startTime < _endTime, "Start time must be less than end time");
 
-        Election storage election = elections[_electionId];
-        election.title = _title;
-        election.description = _description;
-        election.candidates = _candidates;
-        election.startTime = _startTime;
-        election.endTime = _endTime;
+        Election storage e = elections[_electionId];
+        e.title = _title;
+        e.description = _description;
+        e.candidates = _candidates;
+        e.startTime = _startTime;
+        e.endTime = _endTime;
 
         emit ElectionUpdated(_electionId, _title);
     }
 
     // Vote for a candidate in an election (each address can vote only once per election)
     function vote(uint _electionId, uint _candidateIndex) public {
-        Election storage election = elections[_electionId];
+        Election storage e = elections[_electionId];
         require(
-            block.timestamp >= election.startTime &&
-                block.timestamp <= election.endTime,
+            block.timestamp >= e.startTime && block.timestamp <= e.endTime,
             "Election is not active"
         );
-        require(election.active, "Election is disabled");
+        require(e.active, "Election is disabled");
         require(
-            _candidateIndex < election.candidates.length,
+            _candidateIndex < e.candidates.length,
             "Invalid candidate index"
         );
         require(!hasVoted[_electionId][msg.sender], "Already voted");
@@ -123,17 +122,105 @@ contract ElectionManager {
     function computeWinner(
         uint _electionId
     ) public view onlyAdmin returns (string memory winner) {
-        Election storage election = elections[_electionId];
-        require(block.timestamp > election.endTime, "Election is still active");
+        Election storage e = elections[_electionId];
+        require(block.timestamp > e.endTime, "Election is still active");
 
         uint highestVotes = 0;
         uint winnerIndex = 0;
-        for (uint i = 0; i < election.candidates.length; i++) {
+        for (uint i = 0; i < e.candidates.length; i++) {
             if (votes[_electionId][i] > highestVotes) {
                 highestVotes = votes[_electionId][i];
                 winnerIndex = i;
             }
         }
-        winner = election.candidates[winnerIndex];
+        winner = e.candidates[winnerIndex];
+    }
+
+    // A flat version of your Election struct that includes the dynamic array
+    struct ElectionOutput {
+        uint      id;
+        string    title;
+        string    description;
+        string[]  candidates;
+        uint      startTime;
+        uint      endTime;
+        bool      active;
+    }
+
+    /// @notice Fetch all details of one election in a single call
+    function getElection(uint _electionId)
+        external
+        view
+        returns (
+            uint,
+            string memory,
+            string memory,
+            string[] memory,
+            uint,
+            uint,
+            bool
+        )
+    {
+        Election storage e = elections[_electionId];
+        return (
+            e.id,
+            e.title,
+            e.description,
+            e.candidates,
+            e.startTime,
+            e.endTime,
+            e.active
+        );
+    }
+
+    /// @notice Fetch full results: candidate names, their counts, tie flag, and winner
+    function getElectionResults(uint _electionId)
+        external
+        view
+        onlyAdmin
+        returns (
+            string[] memory candidates,
+            uint256[] memory counts,
+            bool isDraw,
+            string memory winner
+        )
+    {
+        Election storage e = elections[_electionId];
+        uint n = e.candidates.length;
+        candidates = e.candidates;
+
+        // Build the counts array
+        counts = new uint256[](n);
+        for (uint i = 0; i < n; i++) {
+            counts[i] = votes[_electionId][i];
+        }
+
+        // Determine highest vote total
+        uint256 highest = 0;
+        for (uint i = 0; i < n; i++) {
+            if (counts[i] > highest) {
+                highest = counts[i];
+            }
+        }
+
+        // Check for ties
+        uint numWinners = 0;
+        uint winnerIndex = 0;
+        for (uint i = 0; i < n; i++) {
+            if (counts[i] == highest) {
+                numWinners++;
+                winnerIndex = i;
+            }
+        }
+
+        // If multiple share the top, it’s a draw
+        isDraw = (numWinners > 1);
+
+        // If single top candidate, set their name; else empty
+        if (!isDraw) {
+            winner = candidates[winnerIndex];
+        } else {
+            winner = ""; // or use "DRAW" sentinel
+        }
     }
 }

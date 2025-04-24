@@ -1,5 +1,5 @@
 import { ethers } from "ethers";
-import authArtifact from "/Users/Taz/voting-app/artifacts/contracts/Auth.sol/Auth.json";
+import authArtifact from "/Users/hamza/Desktop/voting-app/artifacts/contracts/Auth.sol/Auth.json";
 
 // We'll store a reference to the contract here once it's initialized
 let authContract;

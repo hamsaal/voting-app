@@ -1,6 +1,7 @@
 import { useAuth } from "../contexts/AuthProvider.jsx";
 import { Navigate } from "react-router-dom";
-import Home from "./Home.jsx";
+import ElectionPage from "../features/election/pages/ElectionPage.jsx";
+
 
 function Main() {
   const { account, isAdmin, isLoading, error, logout } = useAuth();
@@ -28,7 +29,7 @@ function Main() {
       {error && <p style={{ color: "red" }}>{error}</p>}
       <button onClick={logout}>Logout</button>
 
-      <Home />
+      <ElectionPage />
     </div>
   );
 }

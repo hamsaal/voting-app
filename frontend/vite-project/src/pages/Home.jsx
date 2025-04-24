@@ -14,7 +14,7 @@ import {
   fetchElections,
   initElectionManagerContract,
   vote,
-} from "../election/services/electionServices";
+} from "../features/election/services/electionServices.js";
 import CountdownTimer from "../components/CountdownTimer";
 
 function Home() {

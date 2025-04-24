@@ -11,7 +11,7 @@ import { useNavigate } from "react-router-dom";
 import {
   initElectionManagerContract,
   createElection,
-} from "../../../election/services/electionServices";
+} from "../../election/services/electionServices";
 
 function CreateElection() {
   const [title, setTitle] = useState("");

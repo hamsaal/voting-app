@@ -1,5 +1,5 @@
 import { ethers } from "ethers";
-import electionManagerArtifact from "/Users/Taz/voting-app/artifacts/contracts/ElectionManager.sol/ElectionManager.json";
+import electionManagerArtifact from "/Users/hamza/Desktop/voting-app/artifacts/contracts/ElectionManager.sol/ElectionManager.json";
 
 let electionManagerContract;
 
@@ -59,22 +59,40 @@ export async function fetchElections(currentAccount) {
   const count = Number(countBN);
   const elections = [];
   for (let i = 1; i <= count; i++) {
-    const election = await electionManagerContract.elections(i);
-    let voted = false;
-    if (currentAccount) {
-      voted = await electionManagerContract.hasVoted(i, currentAccount);
-    }
+    const [
+      id,
+      title,
+      description,
+      candidates,
+      startTime,
+      endTime,
+      active
+    ] = await electionManagerContract.getElection(i);
+  
+    const hasVoted = currentAccount
+      ? await electionManagerContract.hasVoted(i, currentAccount)
+      : false;
+
+   const voteCounts = await Promise.all(
+     candidates.map((_, idx) =>
+     electionManagerContract.votes(id, idx).then(bn => Number(bn))
+   )
+   );
+   // ───────────────────────────────────────────────────────
+  
     elections.push({
-      id: Number(election.id),
-      title: election.title,
-      description: election.description,
-      candidates: election.candidates,
-      startTime: Number(election.startTime),
-      endTime: Number(election.endTime),
-      active: election.active,
-      hasVoted: voted,
+      id:         Number(id),
+      title,
+      description,
+      candidates,
+      startTime:  Number(startTime),
+      endTime:    Number(endTime),
+      active,
+      hasVoted,
+      voteCounts
     });
   }
+  
   return elections;
 }
 
@@ -103,4 +121,23 @@ export async function computeWinner(electionId) {
   }
   const winner = await electionManagerContract.computeWinner(electionId);
   return winner;
+}
+/**
+ * Get the vote count for a single candidate in an election
+ */
+export async function getVoteCount(electionId, candidateIndex) {
+  if (!electionManagerContract) {
+    throw new Error("ElectionManager contract not initialized");
+  }
+  const bn = await electionManagerContract.votes(electionId, candidateIndex);
+  return Number(bn);
+}
+export async function getElectionResults(electionId) {
+  if (!electionManagerContract) {
+    throw new Error("ElectionManager contract not initialized");
+  }
+  // This returns [candidates, counts, isDraw, winner]
+  const [candidates, counts, isDraw, winner] =
+    await electionManagerContract.getElectionResults(electionId);
+  return { candidates, counts, isDraw, winner };
 }
