@@ -20,6 +20,27 @@ contract ElectionManager {
 
     mapping(uint => Election) public elections;
     uint public electionCount;
+    // Track which elections have been published…
+mapping(uint => bool) public resultsPublished;
+
+// Keep the on-chain copy of the final tally
+struct PublishedResult {
+  string[]  candidates;
+  uint256[] counts;
+  bool      isDraw;
+  string    winner;
+}
+mapping(uint => PublishedResult) public publishedResults;
+
+// Emit once, so UIs can index/filter by log
+event ResultsPublished(
+  uint indexed electionId,
+  string[]  candidates,
+  uint256[] counts,
+  bool      isDraw,
+  string    winner
+);
+
 
     // Mapping to track votes: electionId => candidate index => vote count
     mapping(uint => mapping(uint => uint)) public votes;
@@ -223,4 +244,47 @@ contract ElectionManager {
             winner = ""; // or use "DRAW" sentinel
         }
     }
+    function publishResults(uint _electionId) external onlyAdmin {
+    Election storage e = elections[_electionId];
+    require(e.id != 0,                      "No such election");
+    require(!resultsPublished[_electionId], "Already published");
+
+    uint n = e.candidates.length;
+    string[] memory cands = new string[](n);
+    for (uint i = 0; i < n; i++) {
+        cands[i] = e.candidates[i];
+    }
+
+    uint256[] memory cnts = new uint256[](n);
+    for (uint i = 0; i < n; i++) {
+        cnts[i] = votes[_electionId][i];
+    }
+
+    uint256 highest = 0;
+    for (uint i = 0; i < n; i++) {
+        if (cnts[i] > highest) highest = cnts[i];
+    }
+
+    uint winners = 0;
+    uint winnerIdx;
+    for (uint i = 0; i < n; i++) {
+        if (cnts[i] == highest) {
+            winners++;
+            winnerIdx = i;
+        }
+    }
+    bool draw = winners > 1;
+    string memory winName = draw ? "" : cands[winnerIdx];
+
+    publishedResults[_electionId] = PublishedResult({
+        candidates: cands,
+        counts:     cnts,
+        isDraw:     draw,
+        winner:     winName
+    });
+    resultsPublished[_electionId] = true;
+
+    emit ResultsPublished(_electionId, cands, cnts, draw, winName);
+}
+
 }

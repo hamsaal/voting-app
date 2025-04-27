@@ -141,3 +141,52 @@ export async function getElectionResults(electionId) {
     await electionManagerContract.getElectionResults(electionId);
   return { candidates, counts, isDraw, winner };
 }
+// New functions for publishing and reading published results
+
+/**
+ * Check if results for a given election are published on-chain.
+ * @param {number} electionId
+ * @returns {Promise<boolean>}
+ */
+export async function isResultsPublished(electionId) {
+  if (!electionManagerContract) {
+    throw new Error("ElectionManager contract not initialized");
+  }
+  return await electionManagerContract.resultsPublished(electionId);
+}
+
+/**
+ * Publish the results of an election on-chain (admin only).
+ * @param {number} electionId
+ * @returns {Promise<ethers.providers.TransactionResponse>}
+ */
+export async function publishResults(electionId) {
+  if (!electionManagerContract) {
+    throw new Error("ElectionManager contract not initialized");
+  }
+  const tx = await electionManagerContract.publishResults(electionId);
+  await tx.wait();
+  return tx;
+}
+
+/**
+ * Fetch the published results for an election.
+ * @param {number} electionId
+ * @returns {Promise<{candidates: string[]; counts: number[]; isDraw: boolean; winner: string;}>>}
+ */
+export async function getPublishedResults(electionId) {
+  if (!electionManagerContract) {
+    throw new Error("ElectionManager contract not initialized");
+  }
+  // Ethers.js may return both array & named properties
+  const res = await electionManagerContract.publishedResults(electionId);
+  const candidates = res.candidates ?? res[0];
+  const rawCounts = res.counts ?? res[1];
+  const counts = Array.isArray(rawCounts)
+    ? rawCounts.map(c => (c.toNumber ? c.toNumber() : c))
+    : [];
+  const isDraw = res.isDraw ?? res[2];
+  const winner = res.winner ?? res[3];
+  return { candidates, counts, isDraw, winner };
+}
+
