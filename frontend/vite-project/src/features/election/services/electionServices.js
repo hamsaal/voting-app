@@ -1,5 +1,5 @@
 import { ethers } from "ethers";
-import electionManagerArtifact from "/Users/hamza/Desktop/voting-app/artifacts/contracts/ElectionManager.sol/ElectionManager.json";
+import electionManagerArtifact from "/root/repo/voting-app/artifacts/contracts/ElectionManager.sol/ElectionManager.json";
 
 let electionManagerContract;
 
