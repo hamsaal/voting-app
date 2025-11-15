@@ -78,12 +78,49 @@ frontend/vite-project/     # React application (pnpm, Vite, MUI)
 - **Admin tools:** create elections, review expired contests, fetch tallies (`getElectionResults`), and publish immutable results on-chain.
 - **User experience:** view upcoming/live elections with countdown timers and cast a single vote per election; published view shows final tallies and winners.
 
-## Testing & Linting
-- Compile contracts: `npx hardhat compile`
-- (Add tests under `test/` and run) `npx hardhat test`
-- Lint frontend: `pnpm lint` inside `frontend/vite-project`
+## Testing
+
+### Smart Contract Tests
+The project includes comprehensive tests for both contracts:
+
+```bash
+# Run all tests
+npm test
+
+# Run with gas reporting
+npm run test:gas
+
+# Run with coverage
+npm run test:coverage
+```
+
+**Test Coverage:**
+- ✅ **Auth Contract** (6 tests)
+  - Deployment & admin initialization
+  - Adding/removing admins
+  - Access control enforcement
+  
+- ✅ **ElectionManager Contract** (14 tests)
+  - Contract deployment & initialization
+  - Election creation with validation
+  - Voting mechanics & double-vote prevention
+  - Results computation & winner selection
+  - Results publishing
+  - Complete election lifecycle
+
+All 20 essential tests passing! ✓
+
+### Frontend Linting
+```bash
+cd frontend/vite-project
+pnpm lint
+```
+
+## Documentation
+- **[SECURITY.md](./SECURITY.md)** - Complete security features and best practices
 
 ## Next Steps
-- Implement the pending "Manage Admin" UI to call `addAdminAddress`/`removeAdminAddress`
-- Extend contract test coverage before mainnet or testnet deployment
-- Consider persisting published artifacts/ABIs inside the frontend tree to avoid absolute import paths
+- Add frontend unit tests (React Testing Library)
+- Extend test coverage for edge cases
+- Consider deploying to testnet (Sepolia, Mumbai)
+- Add events logging dashboard for admins

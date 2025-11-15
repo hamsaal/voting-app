@@ -13,6 +13,11 @@ const DESIRED_CHAIN_ID = "0x7a69";
 // The Auth contract address from your .env, e.g., VITE_CONTRACT_ADDRESS=0x1234...
 const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS;
 
+// Validate contract address on load
+if (!CONTRACT_ADDRESS || CONTRACT_ADDRESS === "undefined") {
+  console.error("❌ VITE_CONTRACT_ADDRESS is not configured in .env file!");
+}
+
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
@@ -24,46 +29,77 @@ export function AuthProvider({ children }) {
   const [isLoading, setIsLoading] = useState(true);
 
   /**
-   * Auto-connect on mount:
-   * 1) Check if there's a stored account in localStorage (optional).
-   * 2) If none, call MetaMask's 'eth_accounts' to see if there's an already-approved account.
+   * Auto-connect on mount and verify chain ID:
+   * 1) Check MetaMask for current account (don't trust localStorage alone)
+   * 2) Verify network and set initial state
    */
   useEffect(() => {
     async function tryAutoConnect() {
-      // 1. Check local storage
-      const storedAcc = localStorage.getItem("connectedAccount");
-      if (storedAcc) {
-        console.log("Restoring account from localStorage:", storedAcc);
-        setAccount(storedAcc);
-      } else if (window.ethereum) {
-        // 2. Check if MetaMask has an approved account
+      if (!window.ethereum) {
+        console.warn("MetaMask not detected");
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        // Get current accounts from MetaMask (most reliable source)
         const accounts = await window.ethereum.request({
           method: "eth_accounts",
         });
+        
+        // Get current chain ID
+        const currentChainId = await window.ethereum.request({
+          method: "eth_chainId",
+        });
+        
+        setChainId(currentChainId);
+        setIsOnDesiredNetwork(
+          currentChainId.toLowerCase() === DESIRED_CHAIN_ID.toLowerCase()
+        );
+
         if (accounts.length) {
-          console.log("Auto-connecting to:", accounts[0]);
-          setAccount(accounts[0]);
-          localStorage.setItem("connectedAccount", accounts[0]); // optional
+          const currentAccount = accounts[0];
+          console.log("Auto-connecting to:", currentAccount);
+          setAccount(currentAccount);
+          
+          // Sync localStorage with MetaMask state
+          localStorage.setItem("connectedAccount", currentAccount);
+        } else {
+          // No connected accounts, clear localStorage
+          localStorage.removeItem("connectedAccount");
+          setIsLoading(false);
         }
+      } catch (error) {
+        console.error("Error during auto-connect:", error);
+        localStorage.removeItem("connectedAccount");
+        setIsLoading(false);
       }
-      // We won't set chainId yet—will do so after connect or in the next effect.
     }
     tryAutoConnect();
   }, []);
 
   /**
    * Listen for account changes in MetaMask
+   * SECURITY: When account changes, immediately reset admin status and re-verify
    */
   useEffect(() => {
     if (window.ethereum) {
       const handleAccountsChanged = (accounts) => {
+        console.log("🔄 Account changed in MetaMask");
         const newAcc = accounts.length ? accounts[0] : "";
+        
+        // SECURITY: Immediately reset admin status on account change
+        setIsAdmin(false);
+        setIsLoading(true);
+        
         setAccount(newAcc);
+        
         // Update local storage
         if (newAcc) {
           localStorage.setItem("connectedAccount", newAcc);
         } else {
           localStorage.removeItem("connectedAccount");
+          setIsLoading(false);
         }
       };
       window.ethereum.on("accountsChanged", handleAccountsChanged);
@@ -79,14 +115,25 @@ export function AuthProvider({ children }) {
 
   /**
    * Listen for chain changes in MetaMask
+   * SECURITY: When network changes, reset admin status and force re-verification
    */
   useEffect(() => {
     if (window.ethereum) {
       const handleChainChanged = (newChainId) => {
+        console.log("🔄 Network changed to:", newChainId);
+        
+        // SECURITY: Reset admin status when network changes
+        setIsAdmin(false);
+        setIsLoading(true);
+        
         setChainId(newChainId);
-        setIsOnDesiredNetwork(
-          newChainId.toLowerCase() === DESIRED_CHAIN_ID.toLowerCase()
-        );
+        const onDesired = newChainId.toLowerCase() === DESIRED_CHAIN_ID.toLowerCase();
+        setIsOnDesiredNetwork(onDesired);
+        
+        if (!onDesired) {
+          setError(`Wrong network! Please switch to chain ID ${DESIRED_CHAIN_ID}`);
+          setIsLoading(false);
+        }
       };
       window.ethereum.on("chainChanged", handleChainChanged);
 
@@ -98,44 +145,106 @@ export function AuthProvider({ children }) {
 
   /**
    * Whenever account or network changes, check admin status if on correct network
+   * SECURITY: Always verify admin status from blockchain, never trust local state
    */
   useEffect(() => {
     async function fetchAdminStatus() {
-      console.log("fetchAdminStatus triggered", {
+      console.log("🔍 Verifying admin status", {
         account,
         isOnDesiredNetwork,
+        contractAddress: CONTRACT_ADDRESS,
       });
 
-      // If no account or wrong network, skip contract calls
-      if (!account || !isOnDesiredNetwork) {
-        console.log(
-          "No account or wrong network => isAdmin=false, isLoading=false"
-        );
+      // SECURITY CHECK 1: Contract address must be configured
+      if (!CONTRACT_ADDRESS || CONTRACT_ADDRESS === "undefined") {
+        console.error("❌ Contract address not configured!");
+        setError("Configuration error: Contract address missing");
         setIsAdmin(false);
         setIsLoading(false);
         return;
       }
 
-      console.log("Setting isLoading=true");
+      // SECURITY CHECK 2: Must have account and be on correct network
+      if (!account || !isOnDesiredNetwork) {
+        console.log("❌ No account or wrong network => isAdmin=false");
+        setIsAdmin(false);
+        setIsLoading(false);
+        return;
+      }
+
+      // SECURITY CHECK 3: Validate account format
+      if (!/^0x[a-fA-F0-9]{40}$/.test(account)) {
+        console.error("❌ Invalid account format:", account);
+        setIsAdmin(false);
+        setIsLoading(false);
+        return;
+      }
+
       setIsLoading(true);
 
       try {
-        console.log("Initializing contract at:", CONTRACT_ADDRESS);
+        console.log("🔐 Initializing Auth contract at:", CONTRACT_ADDRESS);
         await initAuthContract(CONTRACT_ADDRESS);
-        console.log("Contract initialized. Checking admin for:", account);
+        
+        console.log("🔍 Checking admin status for:", account);
         const adminStatus = await checkIfAdmin(account);
-        console.log("adminStatus is:", adminStatus);
+        
+        console.log(adminStatus ? "✅ Admin verified" : "❌ Not an admin");
         setIsAdmin(adminStatus);
+        setError(""); // Clear any previous errors
       } catch (err) {
-        console.error("Admin check failed:", err);
+        console.error("❌ Admin verification failed:", err);
         setIsAdmin(false);
+        setError("Failed to verify admin status. Please refresh and try again.");
       } finally {
-        console.log("Finally block => isLoading=false");
         setIsLoading(false);
       }
     }
+    
     fetchAdminStatus();
   }, [account, isOnDesiredNetwork]);
+
+  /**
+   * Periodic re-validation of admin status
+   * SECURITY: Re-check admin status every 30 seconds to catch permission changes
+   */
+  useEffect(() => {
+    // Only set up interval if user is authenticated and on correct network
+    if (!account || !isOnDesiredNetwork || !isAdmin) {
+      return;
+    }
+
+    console.log("🔄 Setting up periodic admin re-validation (every 30s)");
+
+    const intervalId = setInterval(async () => {
+      try {
+        console.log("🔍 Periodic admin status check...");
+        await initAuthContract(CONTRACT_ADDRESS);
+        const stillAdmin = await checkIfAdmin(account);
+        
+        if (!stillAdmin && isAdmin) {
+          console.warn("⚠️ Admin privileges revoked! Logging out...");
+          setIsAdmin(false);
+          setError("Your admin privileges have been revoked. Please log in again.");
+          // Force logout after a delay so user can see the message
+          setTimeout(() => {
+            logout();
+          }, 3000);
+        } else if (stillAdmin) {
+          console.log("✅ Admin status confirmed");
+        }
+      } catch (err) {
+        console.error("❌ Periodic admin check failed:", err);
+        // Don't logout on temporary failures, just log the error
+      }
+    }, 30000); // Check every 30 seconds
+
+    // Cleanup interval on unmount or when dependencies change
+    return () => {
+      console.log("🛑 Clearing periodic admin validation");
+      clearInterval(intervalId);
+    };
+  }, [account, isOnDesiredNetwork, isAdmin]);
 
   /**
    * Called when user clicks "Log In" button
@@ -207,10 +316,19 @@ export function AuthProvider({ children }) {
       throw err; // Re-throw so the calling component can handle it
     }
   };
+  /**
+   * Logout function - clears all auth state
+   * SECURITY: Completely resets authentication state
+   */
   const logout = () => {
+    console.log("🚪 Logging out");
     setAccount("");
     setIsAdmin(false);
-    localStorage.removeItem("connectedAccount"); // if you're storing the account
+    setIsOnDesiredNetwork(false);
+    setChainId("");
+    setError("");
+    setIsLoading(false);
+    localStorage.removeItem("connectedAccount");
   };
 
   return (

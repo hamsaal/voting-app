@@ -1,12 +1,14 @@
 {
   "name": "voting-app",
   "version": "1.0.0",
-  "description": "",
+  "description": "Decentralized voting application with smart contracts",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "npx hardhat test",
+    "test:coverage": "npx hardhat coverage",
+    "test:gas": "REPORT_GAS=true npx hardhat test"
   },
-  "keywords": [],
+  "keywords": ["blockchain", "voting", "ethereum", "hardhat"],
   "author": "",
   "license": "ISC",
   "devDependencies": {
