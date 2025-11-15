@@ -180,9 +180,11 @@ export function AuthProvider({ children }) {
       await initAuthContract(CONTRACT_ADDRESS);
       const tx = await addAdmin(newAdmin);
       console.log("Add Admin TX:", tx);
+      return tx;
     } catch (err) {
       console.error("Error adding admin:", err);
       setError(err.message);
+      throw err; // Re-throw so the calling component can handle it
     }
   };
 
@@ -198,9 +200,11 @@ export function AuthProvider({ children }) {
       await initAuthContract(CONTRACT_ADDRESS);
       const tx = await removeAdmin(adminToRemove);
       console.log("Remove Admin TX:", tx);
+      return tx;
     } catch (err) {
       console.error("Error removing admin:", err);
       setError(err.message);
+      throw err; // Re-throw so the calling component can handle it
     }
   };
   const logout = () => {
