@@ -13,7 +13,7 @@ export default function ElectionCard({ election, onVote }) {
   const [counts, setCounts] = useState([])
   const [hasVoted, setHasVoted] = useState(election.hasVoted)
 
-  // Refresh vote counts every 5s
+
   useEffect(() => {
     let mounted = true
     async function loadCounts() {

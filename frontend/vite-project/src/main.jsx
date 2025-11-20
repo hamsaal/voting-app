@@ -30,7 +30,6 @@ const router = createBrowserRouter([
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <ThemeProvider theme={theme}>
-      {/* CssBaseline kickstarts an elegant, consistent, baseline to build upon. */}
       <CssBaseline />
       <AuthProvider>
         <RouterProvider router={router} />

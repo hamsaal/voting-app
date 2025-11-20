@@ -7,13 +7,13 @@ import {
 } from "../features/user-auth/services/authService.js";
 import { requestAccount } from "../features/user-auth/utilis/walletUtlis";
 
-// Hardhat local chain ID (0x7a69 = 31337 decimal)
+
 const DESIRED_CHAIN_ID = "0x7a69";
 
-// The Auth contract address from your .env, e.g., VITE_CONTRACT_ADDRESS=0x1234...
+
 const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS;
 
-// Validate contract address on load
+
 if (!CONTRACT_ADDRESS || CONTRACT_ADDRESS === "undefined") {
   console.error("❌ VITE_CONTRACT_ADDRESS is not configured in .env file!");
 }
@@ -28,11 +28,7 @@ export function AuthProvider({ children }) {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
-  /**
-   * Auto-connect on mount and verify chain ID:
-   * 1) Check MetaMask for current account (don't trust localStorage alone)
-   * 2) Verify network and set initial state
-   */
+
   useEffect(() => {
     async function tryAutoConnect() {
       if (!window.ethereum) {
@@ -42,12 +38,12 @@ export function AuthProvider({ children }) {
       }
 
       try {
-        // Get current accounts from MetaMask (most reliable source)
+ 
         const accounts = await window.ethereum.request({
           method: "eth_accounts",
         });
         
-        // Get current chain ID
+        
         const currentChainId = await window.ethereum.request({
           method: "eth_chainId",
         });
@@ -62,10 +58,10 @@ export function AuthProvider({ children }) {
           console.log("Auto-connecting to:", currentAccount);
           setAccount(currentAccount);
           
-          // Sync localStorage with MetaMask state
+  
           localStorage.setItem("connectedAccount", currentAccount);
         } else {
-          // No connected accounts, clear localStorage
+      
           localStorage.removeItem("connectedAccount");
           setIsLoading(false);
         }
@@ -78,23 +74,20 @@ export function AuthProvider({ children }) {
     tryAutoConnect();
   }, []);
 
-  /**
-   * Listen for account changes in MetaMask
-   * SECURITY: When account changes, immediately reset admin status and re-verify
-   */
+
   useEffect(() => {
     if (window.ethereum) {
       const handleAccountsChanged = (accounts) => {
         console.log("🔄 Account changed in MetaMask");
         const newAcc = accounts.length ? accounts[0] : "";
         
-        // SECURITY: Immediately reset admin status on account change
+ 
         setIsAdmin(false);
         setIsLoading(true);
         
         setAccount(newAcc);
         
-        // Update local storage
+   
         if (newAcc) {
           localStorage.setItem("connectedAccount", newAcc);
         } else {
@@ -113,16 +106,12 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  /**
-   * Listen for chain changes in MetaMask
-   * SECURITY: When network changes, reset admin status and force re-verification
-   */
+
   useEffect(() => {
     if (window.ethereum) {
       const handleChainChanged = (newChainId) => {
         console.log("🔄 Network changed to:", newChainId);
-        
-        // SECURITY: Reset admin status when network changes
+       
         setIsAdmin(false);
         setIsLoading(true);
         
@@ -143,10 +132,6 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  /**
-   * Whenever account or network changes, check admin status if on correct network
-   * SECURITY: Always verify admin status from blockchain, never trust local state
-   */
   useEffect(() => {
     async function fetchAdminStatus() {
       console.log("🔍 Verifying admin status", {
@@ -155,7 +140,6 @@ export function AuthProvider({ children }) {
         contractAddress: CONTRACT_ADDRESS,
       });
 
-      // SECURITY CHECK 1: Contract address must be configured
       if (!CONTRACT_ADDRESS || CONTRACT_ADDRESS === "undefined") {
         console.error("❌ Contract address not configured!");
         setError("Configuration error: Contract address missing");
@@ -164,7 +148,7 @@ export function AuthProvider({ children }) {
         return;
       }
 
-      // SECURITY CHECK 2: Must have account and be on correct network
+ 
       if (!account || !isOnDesiredNetwork) {
         console.log("❌ No account or wrong network => isAdmin=false");
         setIsAdmin(false);
@@ -172,7 +156,7 @@ export function AuthProvider({ children }) {
         return;
       }
 
-      // SECURITY CHECK 3: Validate account format
+
       if (!/^0x[a-fA-F0-9]{40}$/.test(account)) {
         console.error("❌ Invalid account format:", account);
         setIsAdmin(false);
@@ -191,7 +175,7 @@ export function AuthProvider({ children }) {
         
         console.log(adminStatus ? "✅ Admin verified" : "❌ Not an admin");
         setIsAdmin(adminStatus);
-        setError(""); // Clear any previous errors
+        setError(""); 
       } catch (err) {
         console.error("❌ Admin verification failed:", err);
         setIsAdmin(false);
@@ -204,12 +188,9 @@ export function AuthProvider({ children }) {
     fetchAdminStatus();
   }, [account, isOnDesiredNetwork]);
 
-  /**
-   * Periodic re-validation of admin status
-   * SECURITY: Re-check admin status every 30 seconds to catch permission changes
-   */
+
   useEffect(() => {
-    // Only set up interval if user is authenticated and on correct network
+
     if (!account || !isOnDesiredNetwork || !isAdmin) {
       return;
     }
@@ -226,7 +207,7 @@ export function AuthProvider({ children }) {
           console.warn("⚠️ Admin privileges revoked! Logging out...");
           setIsAdmin(false);
           setError("Your admin privileges have been revoked. Please log in again.");
-          // Force logout after a delay so user can see the message
+     
           setTimeout(() => {
             logout();
           }, 3000);
@@ -235,24 +216,20 @@ export function AuthProvider({ children }) {
         }
       } catch (err) {
         console.error("❌ Periodic admin check failed:", err);
-        // Don't logout on temporary failures, just log the error
-      }
-    }, 30000); // Check every 30 seconds
 
-    // Cleanup interval on unmount or when dependencies change
+      }
+    }, 30000); 
+
     return () => {
       console.log("🛑 Clearing periodic admin validation");
       clearInterval(intervalId);
     };
   }, [account, isOnDesiredNetwork, isAdmin]);
 
-  /**
-   * Called when user clicks "Log In" button
-   */
   const connectWallet = async () => {
     try {
       setError("");
-      const acc = await requestAccount(); // triggers MetaMask to request accounts
+      const acc = await requestAccount(); 
       setAccount(acc);
       localStorage.setItem("connectedAccount", acc);
 
@@ -277,9 +254,6 @@ export function AuthProvider({ children }) {
     }
   };
 
-  /**
-   * Add new admin address (only works if current user is admin)
-   */
   const addAdminAddress = async (newAdmin) => {
     try {
       setError("");
@@ -293,13 +267,11 @@ export function AuthProvider({ children }) {
     } catch (err) {
       console.error("Error adding admin:", err);
       setError(err.message);
-      throw err; // Re-throw so the calling component can handle it
+      throw err; 
     }
   };
 
-  /**
-   * Remove an admin address (only works if current user is admin)
-   */
+
   const removeAdminAddress = async (adminToRemove) => {
     try {
       setError("");
@@ -313,13 +285,10 @@ export function AuthProvider({ children }) {
     } catch (err) {
       console.error("Error removing admin:", err);
       setError(err.message);
-      throw err; // Re-throw so the calling component can handle it
+      throw err; 
     }
   };
-  /**
-   * Logout function - clears all auth state
-   * SECURITY: Completely resets authentication state
-   */
+
   const logout = () => {
     console.log("🚪 Logging out");
     setAccount("");
@@ -351,9 +320,7 @@ export function AuthProvider({ children }) {
   );
 }
 
-/**
- * Custom hook to consume AuthContext
- */
+
 export function useAuth() {
   return useContext(AuthContext);
 }

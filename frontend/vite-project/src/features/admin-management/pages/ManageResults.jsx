@@ -44,7 +44,7 @@ export default function ManageResults() {
         const expired = all.filter((e) => now > e.endTime)
         setExpiredElections(expired)
 
-        // fetch published flags for expired elections
+        
         const flags = await Promise.all(expired.map(async (e) => [e.id, await isResultsPublished(e.id)]))
         setPublishedMap(Object.fromEntries(flags))
       } catch (err) {

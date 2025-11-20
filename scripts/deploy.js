@@ -5,14 +5,12 @@ const path = require("path");
 async function main() {
   console.log("Starting deployment...");
 
-  // Deploy Auth contract first
   const Auth = await hre.ethers.getContractFactory("Auth");
   const auth = await Auth.deploy();
   await auth.waitForDeployment();
   const authAddress = await auth.getAddress();
   console.log("Auth deployed to:", authAddress);
 
-  // Deploy ElectionManager contract with Auth's address as parameter
   const ElectionManager = await hre.ethers.getContractFactory(
     "ElectionManager"
   );
@@ -21,18 +19,15 @@ async function main() {
   const electionManagerAddress = await electionManager.getAddress();
   console.log("ElectionManager deployed to:", electionManagerAddress);
 
-  // Update frontend .env file with contract addresses
   console.log("\nUpdating frontend .env file...");
   const frontendEnvPath = path.join(__dirname, "..", "frontend", "vite-project", ".env");
   
   let envContent = "";
   
-  // Read existing .env file if it exists
   if (fs.existsSync(frontendEnvPath)) {
     envContent = fs.readFileSync(frontendEnvPath, "utf8");
   }
 
-  // Update or add VITE_CONTRACT_ADDRESS
   if (envContent.includes("VITE_CONTRACT_ADDRESS=")) {
     envContent = envContent.replace(
       /VITE_CONTRACT_ADDRESS=.*/,
@@ -42,7 +37,6 @@ async function main() {
     envContent += `VITE_CONTRACT_ADDRESS=${authAddress}\n`;
   }
 
-  // Update or add VITE_ELECTION_MANAGER_ADDRESS
   if (envContent.includes("VITE_ELECTION_MANAGER_ADDRESS=")) {
     envContent = envContent.replace(
       /VITE_ELECTION_MANAGER_ADDRESS=.*/,
@@ -52,10 +46,40 @@ async function main() {
     envContent += `VITE_ELECTION_MANAGER_ADDRESS=${electionManagerAddress}\n`;
   }
 
-  // Write to file
   fs.writeFileSync(frontendEnvPath, envContent.trim() + "\n");
   console.log("✓ Frontend .env updated successfully");
   console.log(`  File: ${frontendEnvPath}`);
+
+  const artifactsDir = path.join(__dirname, "..", "artifacts", "contracts");
+  const frontendContractsDir = path.join(
+    __dirname,
+    "..",
+    "frontend",
+    "vite-project",
+    "src",
+    "contracts"
+  );
+
+  if (!fs.existsSync(frontendContractsDir)) {
+    fs.mkdirSync(frontendContractsDir, { recursive: true });
+  }
+
+  const authArtifactSrc = path.join(artifactsDir, "Auth.sol", "Auth.json");
+  const authArtifactDest = path.join(frontendContractsDir, "Auth.json");
+  fs.copyFileSync(authArtifactSrc, authArtifactDest);
+
+  const electionArtifactSrc = path.join(
+    artifactsDir,
+    "ElectionManager.sol",
+    "ElectionManager.json"
+  );
+  const electionArtifactDest = path.join(
+    frontendContractsDir,
+    "ElectionManager.json"
+  );
+  fs.copyFileSync(electionArtifactSrc, electionArtifactDest);
+
+  console.log("✓ Frontend contract ABIs copied to src/contracts");
 }
 
 main().catch((error) => {

@@ -7,7 +7,7 @@ import { useAuth } from "../../../contexts/AuthProvider"
 function Login() {
   const { account, isOnDesiredNetwork, isLoading, error, connectWallet } = useAuth()
 
-  // While checking admin status, show a loader.
+  
   if (isLoading) {
     return (
       <Container maxWidth="sm" sx={{ mt: { xs: 4, sm: 8 } }}>
@@ -29,7 +29,7 @@ function Login() {
     )
   }
 
-  // If already connected and on the correct network, redirect to home.
+  
   if (account && isOnDesiredNetwork) {
     return <Navigate to="/" replace />
   }

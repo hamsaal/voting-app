@@ -1,5 +1,5 @@
 import { ethers } from "ethers";
-import electionManagerArtifact from "/root/repo/voting-app/artifacts/contracts/ElectionManager.sol/ElectionManager.json";
+import electionManagerArtifact from "../../../contracts/ElectionManager.json";
 
 let electionManagerContract;
 
@@ -21,9 +21,7 @@ export async function initElectionManagerContract(contractAddress) {
   return electionManagerContract;
 }
 
-/**
- * Create a new election.
- */
+
 export async function createElection(
   title,
   description,
@@ -46,8 +44,7 @@ export async function createElection(
 }
 
 /**
- * Fetch all elections from the ElectionManager contract.
- * Also checks if the current account has voted in each election.
+
  * @param {string} currentAccount The user's wallet address.
  * @returns {Promise<Array>} Array of election objects.
  */
@@ -122,9 +119,7 @@ export async function computeWinner(electionId) {
   const winner = await electionManagerContract.computeWinner(electionId);
   return winner;
 }
-/**
- * Get the vote count for a single candidate in an election
- */
+
 export async function getVoteCount(electionId, candidateIndex) {
   if (!electionManagerContract) {
     throw new Error("ElectionManager contract not initialized");
@@ -136,12 +131,12 @@ export async function getElectionResults(electionId) {
   if (!electionManagerContract) {
     throw new Error("ElectionManager contract not initialized");
   }
-  // This returns [candidates, counts, isDraw, winner]
+
   const [candidates, counts, isDraw, winner] =
     await electionManagerContract.getElectionResults(electionId);
   return { candidates, counts, isDraw, winner };
 }
-// New functions for publishing and reading published results
+
 
 /**
  * Check if results for a given election are published on-chain.
@@ -178,7 +173,7 @@ export async function getPublishedResults(electionId) {
   if (!electionManagerContract) {
     throw new Error("ElectionManager contract not initialized");
   }
-  // Ethers.js may return both array & named properties
+
   const res = await electionManagerContract.publishedResults(electionId);
   const candidates = res.candidates ?? res[0];
   const rawCounts = res.counts ?? res[1];

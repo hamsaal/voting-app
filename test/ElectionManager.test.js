@@ -209,7 +209,6 @@ describe("ElectionManager Contract", function () {
       const startTime = now + 100;
       const endTime = startTime + 2000;
 
-      // Create election
       await electionManager.connect(owner).createElection(
         "Presidential Election",
         "Vote for president",
@@ -218,18 +217,15 @@ describe("ElectionManager Contract", function () {
         endTime
       );
 
-      // Vote
       await time.increaseTo(startTime + 1);
       await electionManager.connect(voter1).vote(1, 0);
       await electionManager.connect(voter2).vote(1, 0);
       await electionManager.connect(voter3).vote(1, 1);
 
-      // Get results after election
       await time.increaseTo(endTime + 1);
       const winner = await electionManager.connect(owner).computeWinner(1);
       expect(winner).to.equal("Candidate A");
 
-      // Publish
       await electionManager.connect(owner).publishResults(1);
       expect(await electionManager.resultsPublished(1)).to.equal(true);
     });

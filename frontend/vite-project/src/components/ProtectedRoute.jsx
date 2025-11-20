@@ -26,7 +26,7 @@ function ProtectedRoute({ children, requireAdmin = false, redirectTo = "/login" 
     logout 
   } = useAuth();
 
-  // SECURITY CHECK 1: Show loading state while verifying
+
   if (isLoading) {
     return (
       <Container maxWidth="md" sx={{ mt: 4, textAlign: "center" }}>
@@ -38,13 +38,13 @@ function ProtectedRoute({ children, requireAdmin = false, redirectTo = "/login" 
     );
   }
 
-  // SECURITY CHECK 2: Must have connected account
+
   if (!account) {
     console.warn("❌ ProtectedRoute: No account connected");
     return <Navigate to={redirectTo} replace />;
   }
 
-  // SECURITY CHECK 3: Must be on correct network
+
   if (!isOnDesiredNetwork) {
     return (
       <Container maxWidth="md" sx={{ mt: 4 }}>
@@ -76,13 +76,13 @@ function ProtectedRoute({ children, requireAdmin = false, redirectTo = "/login" 
     );
   }
 
-  // SECURITY CHECK 4: If admin required, enforce it
+
   if (requireAdmin && !isAdmin) {
     console.warn("❌ ProtectedRoute: Admin access required but user is not admin");
     return <Navigate to="/" replace />;
   }
 
-  // All security checks passed - render children
+
   return <>{children}</>;
 }
 

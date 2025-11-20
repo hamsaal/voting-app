@@ -1,7 +1,6 @@
 import { ethers } from "ethers";
-import authArtifact from "/root/repo/voting-app/artifacts/contracts/Auth.sol/Auth.json";
+import authArtifact from "../../../contracts/Auth.json";
 
-// We'll store a reference to the contract here once it's initialized
 let authContract;
 
 /**
@@ -13,14 +12,14 @@ export async function initAuthContract(contractAddress) {
     throw new Error("MetaMask not found");
   }
 
-  // Create a provider & signer (Ethers v6 syntax)
+
   const provider = new ethers.BrowserProvider(window.ethereum);
   const signer = await provider.getSigner();
 
-  // Initialize the contract
+
   authContract = new ethers.Contract(contractAddress, authArtifact.abi, signer);
 
-  return authContract; // in case you want to do something immediately
+  return authContract; 
 }
 
 /**
@@ -48,7 +47,7 @@ export async function addAdmin(newAdminAddress) {
     );
   }
   const tx = await authContract.addAdmin(newAdminAddress);
-  await tx.wait(); // Wait for the transaction to confirm
+  await tx.wait(); 
 }
 
 /**

@@ -15,34 +15,29 @@ import { initAuthContract, checkIfAdmin } from "../../user-auth/services/authSer
 function ManageAdmin() {
   const { addAdminAddress, removeAdminAddress } = useAuth();
 
-  // State for adding admin
   const [newAdminAddress, setNewAdminAddress] = useState("");
   const [addLoading, setAddLoading] = useState(false);
   const [addSuccess, setAddSuccess] = useState("");
   const [addError, setAddError] = useState("");
 
-  // State for removing admin
+  
   const [removeAddress, setRemoveAddress] = useState("");
   const [removeLoading, setRemoveLoading] = useState(false);
   const [removeSuccess, setRemoveSuccess] = useState("");
   const [removeError, setRemoveError] = useState("");
 
-  // State for checking admin status
+  
   const [checkAddress, setCheckAddress] = useState("");
   const [checkLoading, setCheckLoading] = useState(false);
   const [checkResult, setCheckResult] = useState(null);
   const [checkError, setCheckError] = useState("");
 
-  /**
-   * Validate Ethereum address format
-   */
+
   const isValidAddress = (address) => {
     return /^0x[a-fA-F0-9]{40}$/.test(address);
   };
 
-  /**
-   * Handle adding a new admin
-   */
+
   const handleAddAdmin = async () => {
     setAddSuccess("");
     setAddError("");
@@ -71,9 +66,7 @@ function ManageAdmin() {
     }
   };
 
-  /**
-   * Handle removing an admin
-   */
+
   const handleRemoveAdmin = async () => {
     setRemoveSuccess("");
     setRemoveError("");
@@ -102,9 +95,7 @@ function ManageAdmin() {
     }
   };
 
-  /**
-   * Handle checking if an address is admin
-   */
+ 
   const handleCheckAdmin = async () => {
     setCheckResult(null);
     setCheckError("");
@@ -122,7 +113,7 @@ function ManageAdmin() {
     setCheckLoading(true);
 
     try {
-      // Initialize contract before checking
+     
       const contractAddress = import.meta.env.VITE_CONTRACT_ADDRESS;
       await initAuthContract(contractAddress);
       const isAdmin = await checkIfAdmin(checkAddress.trim());

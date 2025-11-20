@@ -8,7 +8,7 @@ function AdminPage() {
   const { isAdmin, isLoading, account, isOnDesiredNetwork, chainId, logout, error } = useAuth()
   const navigate = useNavigate()
 
-  // SECURITY: Show loading state while verifying
+  
   if (isLoading) {
     return (
       <Container maxWidth="md" sx={{ mt: 4, textAlign: "center" }}>
@@ -18,12 +18,11 @@ function AdminPage() {
     )
   }
 
-  // SECURITY: Must be connected
   if (!account) {
     return <Navigate to="/login" replace />
   }
 
-  // SECURITY: Must be on correct network
+
   if (!isOnDesiredNetwork) {
     return (
       <Container maxWidth="md" sx={{ mt: 4 }}>
@@ -43,7 +42,7 @@ function AdminPage() {
     )
   }
 
-  // SECURITY: Must be admin
+  
   if (!isAdmin) {
     return <Navigate to="/" replace />
   }
